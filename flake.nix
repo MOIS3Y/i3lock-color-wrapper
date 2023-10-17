@@ -1,5 +1,7 @@
 {
-  description = "base16 colorlib for python projects";
+  description = ''
+    Pre-configured script to run i3lock-color
+    with the ability to change the color scheme and some parameters'';
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
@@ -10,14 +12,15 @@
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
     in {
-    packages.${system}.default = with pkgs; poetry2nix.mkPoetryApplication {
-      projectDir = self;
-      preferWheels = true;
-      propagatedBuildInputs = [
-        i3lock-color
-      ];
-    };
-    devShells.${system}.default = pkgs.mkShellNoCC {
+    packages.${system}.i3lock-color-wrapper = with pkgs;
+      poetry2nix.mkPoetryApplication {
+        projectDir = self;
+        preferWheels = true;
+        propagatedBuildInputs = [
+          i3lock-color
+        ];
+      };
+    devShells.${system}.i3lock-color-wrapper = pkgs.mkShellNoCC {
       shellHook = ''
         echo
         echo "█░█░█ █▀▀ █░░ █▀▀ █▀█ █▀▄▀█ █▀▀"
