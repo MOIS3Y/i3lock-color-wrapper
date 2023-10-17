@@ -2,6 +2,7 @@
 
 Pre-configured script to run i3lock-color with the ability to change the color scheme and some parameters
 
+![image info](https://raw.githubusercontent.com/MOIS3Y/i3lock-color-wrapper/assets/i3lock-color-wrapper.png)
 
 ## What is it ?
 
