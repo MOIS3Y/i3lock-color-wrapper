@@ -5,54 +5,53 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    poetry2nix = {
-      url = "github:nix-community/poetry2nix";
-      inputs.nixpkgs.follows = "nixpkgs";
+    systems.url = "github:nix-systems/default-linux";
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+      inputs.systems.follows = "systems";
     };
   };
 
-  outputs = { self, nixpkgs, poetry2nix, ... }:
-    let
-      system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
-      inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryApplication;
-      inherit (poetry2nix.lib.mkPoetry2Nix { inherit pkgs; }) mkPoetryEnv;
-    in {
+  outputs = { self, nixpkgs, flake-utils, ... }:
+    flake-utils.lib.eachDefaultSystem (system:
+      let
+        pkgs = import nixpkgs { inherit system; };
+        python = pkgs.python3;
+        pythonPackages = python.pkgs;
+      in {
+      packages = rec {
+        i3lock-run = pythonPackages.buildPythonApplication {
+          pname = "i3lock-run";
+          version = "0.1.0";
+          format = "pyproject";
+          src = self;
 
-    # Executed by `nix build .#<name>
-    # ? Example: nix build .#i3lock-color-wrapper 
-    packages.${system} = {
-      i3lock-color-wrapper = with pkgs; mkPoetryApplication { 
-        projectDir = self; 
-        preferWheels = true;
-        propagatedBuildInputs = [
-          i3lock-color
-        ];
+          nativeBuildInputs = [
+            pythonPackages.poetry-core
+          ];
+          dependencies = [
+            pkgs.i3lock-color
+          ];
+        };
+        default = i3lock-run;
       };
-      default = self.packages.${system}.i3lock-color-wrapper;
-    };
-    
-    # Executed by `nix run . -- <args?>`
-    # ? example: nix run .#i3lock-color-wrapper -- --version
-    apps.${system}.i3lock-color-wrapper = {
-      type = "app";
-      program = "${self.packages.${system}.i3lock-color-wrapper}/bin/i3lock-run";
-    };
+      apps = rec {
+        i3lock-run = flake-utils.lib.mkApp {
+          drv = self.packages.${system}.i3lock-run;
+        };
+        default = i3lock-run;
+      };
 
-    # Used by `nix develop`
-    # ? Example: nix develop .#i3lock-color-wrapper
-    devShells.${system}.i3lock-color-wrapper = pkgs.mkShellNoCC {
-      shellHook = ''
-        echo
-        echo "█░█░█ █▀▀ █░░ █▀▀ █▀█ █▀▄▀█ █▀▀"
-        echo "▀▄▀▄▀ ██▄ █▄▄ █▄▄ █▄█ █░▀░█ ██▄"
-        echo "-- -- -- -- -- -- -- -- -- -- -"
-        echo
-      '';
-      packages = with pkgs; [
-        (mkPoetryEnv { projectDir = self; preferWheels = true; })
-        i3lock-color
-      ];
-    };
-  };
+      devShells.default = pkgs.mkShell {
+        buildInputs = [
+          python
+          pkgs.poetry
+        ];
+
+        shellHook = ''
+          poetry env use ${python}/bin/python
+          poetry install
+        '';
+      };
+  });
 }
